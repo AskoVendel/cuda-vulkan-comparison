@@ -124,7 +124,7 @@ void process_image(const char* filename) {
 
 	unsigned char* data = stbi_load(filename, &x, &y, &n, 3);
 
-	//rotate_img(data, x, y);
+	//rotate_img(data, x, y); with rotate only!!!
 	moving_average_filter_3(data, x, y);
 }
 
