@@ -69,24 +69,26 @@ void rotate_img(unsigned char* data, int x, int y) {
 		}
 	}
 
-	stbi_write_bmp("test_out.bmp", new_width, new_height, 3, zeros);
+	stbi_write_bmp("output.bmp", new_width, new_height, 3, zeros);
 }
 
-void moving_average_filter_3(unsigned char* data, int width, int height) {
+void moving_average_filter_5(unsigned char* data, int width, int height) {
 
 	unsigned char* temp = new unsigned char[width * height * 3];
-	unsigned char* output = new unsigned char[width * height * 3];
+	unsigned char* output_smoothening = new unsigned char[width * height * 3];
 
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			for (int c = 0; c < 3; c++) {
 				int index = (y * width + x) * 3 + c;
 
+				int previous2 = (x > 1) ? data[index - 6] : data[index];
 				int previous = (x > 0) ? data[index - 3] : data[index];
 				int current = data[index];
 				int next = (x < width - 1) ? data[index + 3] : data[index];
+				int next2 = (x < width - 2) ? data[index + 6] : data[index];
 
-				temp[index] = (previous + current + next) / 3;
+				temp[index] = (previous2 + previous + current + next + next2) / 5;
 			}
 		}
 	}
@@ -96,16 +98,59 @@ void moving_average_filter_3(unsigned char* data, int width, int height) {
 			for (int c = 0; c < 3; c++) {
 				int index = (y * width + x) * 3 + c;
 
+				int previous2 = (y > 1) ? temp[index - (width * 6)] : temp[index];
 				int previous = (y > 0) ? temp[index - (width * 3)] : temp[index];
 				int current = temp[index];
 				int next = (y < height - 1) ? temp[index + (width * 3)] : temp[index];
+				int next2 = (y < height - 2) ? temp[index + (width * 6)] : temp[index];
 
-				output[index] = (previous + current + next) / 3;
+				output_smoothening[index] = (previous2 + previous + current + next + next2) / 5;
 			}
 		}
 	}
 
+	//stbi_write_bmp("output_smoothening.bmp", width, height, 3, output_smoothening);
+
+	unsigned char* output_edge = new unsigned char[width * height * 3];
+
+	// Apply 3x3 convolution filter
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int c = 0; c < 3; c++) {  // Process R, G, B channels separately
+				int idx = (y * width + x) * 3 + c;
+
+				// Get pixel values with boundary handling
+				auto pixel = [&](int dx, int dy) -> int {
+					int newX = min(max(x + dx, 0), width - 1);
+					int newY = min(max(y + dy, 0), height - 1);
+					return data[(newY * width + newX) * 3 + c];
+					};
+
+				// Apply the convolution kernel
+				int result =
+					(pixel(1, 1) + pixel(-1, 1) + pixel(1, -1) + pixel(-1, -1)) / 4
+					- pixel(1, 0) - pixel(-1, 0) - pixel(0, 1) - pixel(0, -1)
+					+ 3 * pixel(0, 0);
+				// Clamp values to 0-255 range
+				output_edge[idx] = max(0, min(255, result));
+			}
+		}
+	}
+
+	int sharpening_multiplier = 1;
+	unsigned char* output = new unsigned char[width * height * 3];
+
+	for (int i = 0; i < width * height * 3; i++) {
+		output[i] = output_smoothening[i] + sharpening_multiplier * output_edge[i];
+	}
+
 	stbi_write_bmp("output.bmp", width, height, 3, output);
+
+	stbi_image_free(data);
+	delete[] temp;
+	delete[] output_smoothening;
+	delete[] output_edge;
+	delete[] output;
 }
 
 void process_image(const char* filename) {
@@ -124,12 +169,12 @@ void process_image(const char* filename) {
 
 	unsigned char* data = stbi_load(filename, &x, &y, &n, 3);
 
-	//rotate_img(data, x, y); with rotate only!!!
-	moving_average_filter_3(data, x, y);
+	//rotate_img(data, x, y); with rotate.bmp only!!!
+	moving_average_filter_5(data, x, y);
 }
 
 int main() {
-	process_image("rotate.bmp");
+	process_image("noise.bmp");
 
 	return 0;
 }
