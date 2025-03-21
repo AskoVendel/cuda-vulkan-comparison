@@ -6,6 +6,7 @@
 #include <iostream>
 #include "stb_image.h"
 #include "stb_image_write.h"
+
 using namespace std;
 
 void rotate_img(unsigned char* data, int x, int y) {
@@ -109,7 +110,7 @@ void moving_average_filter_5(unsigned char* data, int width, int height) {
 		}
 	}
 
-	//stbi_write_bmp("output_smoothening.bmp", width, height, 3, output_smoothening);
+	stbi_write_bmp("output_smoothening.bmp", width, height, 3, output_smoothening);
 
 	unsigned char* output_edge = new unsigned char[width * height * 3];
 
@@ -137,7 +138,7 @@ void moving_average_filter_5(unsigned char* data, int width, int height) {
 		}
 	}
 
-	//stbi_write_bmp("output_edges.bmp", width, height, 3, output_edge);
+	stbi_write_bmp("output_edges.bmp", width, height, 3, output_edge);
 
 	int sharpening_multiplier = 1;
 	unsigned char* output = new unsigned char[width * height * 3];
@@ -175,8 +176,10 @@ void process_image(const char* filename) {
 	moving_average_filter_5(data, x, y);
 }
 
+
 int main() {
 	process_image("noise.bmp");
 
 	return 0;
 }
+
