@@ -137,6 +137,8 @@ void moving_average_filter_5(unsigned char* data, int width, int height) {
 		}
 	}
 
+	//stbi_write_bmp("output_edges.bmp", width, height, 3, output_edge);
+
 	int sharpening_multiplier = 1;
 	unsigned char* output = new unsigned char[width * height * 3];
 
