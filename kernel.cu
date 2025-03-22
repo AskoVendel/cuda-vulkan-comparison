@@ -95,7 +95,7 @@ __global__ void highpass_filter_kernel(unsigned char* d_data, int width, int hei
 
         
         float new_value = d_data[index] + sum * sharp_mul;
-        d_out[index] = max(0, min(255, (int)new_value));  // Clamp to [0,255]
+        d_out[index] = max(0, min(255, (int)new_value)); 
     }
 }
 
