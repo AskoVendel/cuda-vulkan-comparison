@@ -1,3 +1,4 @@
+/*
 #define _USE_MATH_DEFINES
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -182,4 +183,4 @@ int main() {
 
 	return 0;
 }
-
+*/
