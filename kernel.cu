@@ -73,18 +73,18 @@ __global__ void highpass_filter_kernel(unsigned char* d_data, int width, int hei
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x >= width || y >= height) return;  // Out-of-bounds check
+    if (x >= width || y >= height) return;  // Bounds check
 
-    for (int c = 0; c < 3; c++) {  // Iterate over R, G, B channels
+    for (int c = 0; c < 3; c++) {  // RGB
         int index = (y * width + x) * 3 + c;
 
-        // Handle edges (no filtering applied)
+        
         if (y < N || x < N || y >= height - N || x >= width - N) {
             d_out[index] = d_data[index];
             continue;
         }
 
-        // Apply high-pass filter
+        
         float sum = 0;
         for (int a = -N; a <= N; a++) {
             for (int b = -N; b <= N; b++) {
@@ -93,7 +93,7 @@ __global__ void highpass_filter_kernel(unsigned char* d_data, int width, int hei
             }
         }
 
-        // Compute final pixel value
+        
         float new_value = d_data[index] + sum * sharp_mul;
         d_out[index] = max(0, min(255, (int)new_value));  // Clamp to [0,255]
     }
