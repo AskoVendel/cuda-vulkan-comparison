@@ -362,3 +362,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /output.bmp
+/main.cpp.bak
+/noise_blur1.bmp
+/noise_sharp1.bmp
+/vulkan_main.cpp
