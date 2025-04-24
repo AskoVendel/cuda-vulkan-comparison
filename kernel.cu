@@ -11,9 +11,11 @@
 #include "device_launch_parameters.h"
 #include <stdio.h>
 
+#include <chrono>
+
 using namespace std;
 
-#define CHANNELS 3
+#define CHANNELS 4
 
 void average_filter(int N, float* coeff) {
     for (int i = 0; i <= N; i++)
@@ -28,7 +30,7 @@ __global__ void lowpass_filter_kernel(unsigned char* d_data, int width, int heig
     if (x >= width || y >= height) return; // Bounds check
 
     for (int c = 0; c < 3; c++) {  // RGB
-        int index = (y * width + x) * 3 + c;
+        int index = (y * width + x) * 4 + c;
 
         
         if (y < N || x < N || y >= height - N || x >= width - N) {
@@ -39,7 +41,7 @@ __global__ void lowpass_filter_kernel(unsigned char* d_data, int width, int heig
         float sum = 0.0f;
         for (int a = -N; a <= N; a++) {
             for (int b = -N; b <= N; b++) {
-                int neighbor_idx = ((y + b) * width + (x + a)) * 3 + c;
+                int neighbor_idx = ((y + b) * width + (x + a)) * 4 + c;
                 sum += d_data[neighbor_idx] * d_coeff[(abs(a) * (N + 1)) + abs(b)];
             }
         }
@@ -75,8 +77,8 @@ __global__ void highpass_filter_kernel(unsigned char* d_data, int width, int hei
 
     if (x >= width || y >= height) return;  // Bounds check
 
-    for (int c = 0; c < 3; c++) {  // RGB
-        int index = (y * width + x) * 3 + c;
+    for (int c = 0; c < 4; c++) {  // RGB
+        int index = (y * width + x) * 4 + c;
 
         
         if (y < N || x < N || y >= height - N || x >= width - N) {
@@ -88,7 +90,7 @@ __global__ void highpass_filter_kernel(unsigned char* d_data, int width, int hei
         float sum = 0;
         for (int a = -N; a <= N; a++) {
             for (int b = -N; b <= N; b++) {
-                int neighbor_idx = ((y + b) * width + (x + a)) * 3 + c;
+                int neighbor_idx = ((y + b) * width + (x + a)) * 4 + c;
                 sum += d_data[neighbor_idx] * d_coeff[abs(a) * (N + 1) + abs(b)];
             }
         }
@@ -119,12 +121,12 @@ void process_noise(void) {
     cout << "bytes per pixel: " << n << "\n";
     cout << "-------------------------" << "\n";
 
-    unsigned char* data = stbi_load("noise.bmp", &x, &y, &n, 3);
+    unsigned char* data = stbi_load("noise.bmp", &x, &y, &n, CHANNELS);
 
-    unsigned char* out = new unsigned char[x * y * 3];
-    unsigned char* out1 = new unsigned char[x * y * 3];
-    unsigned char* out2 = new unsigned char[x * y * 3];
-    unsigned char* out3 = new unsigned char[x * y * 3];
+    unsigned char* out = new unsigned char[x * y * CHANNELS];
+    unsigned char* out1 = new unsigned char[x * y * CHANNELS];
+    unsigned char* out2 = new unsigned char[x * y * CHANNELS];
+    //unsigned char* out3 = new unsigned char[x * y * 3];
 
     // Allocate Data memory on device
     cudaError_t errDataMalloc = cudaMalloc((void**)&d_data, (sizeof(unsigned char) * y * x * CHANNELS));
@@ -166,6 +168,7 @@ void process_noise(void) {
         std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
     }
 
+    
     float divider = 0;
     for (int i = -n; i <= n; i++)
         for (int j = -n; j <= n; j++)
@@ -173,8 +176,21 @@ void process_noise(void) {
     
     dim3 blockSize(16, 16);
     dim3 gridSize((x + blockSize.x - 1) / blockSize.x, (y + blockSize.y - 1) / blockSize.y);
+
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+
+    auto t1 = high_resolution_clock::now();
+
     lowpass_filter_kernel << <gridSize, blockSize >> > (d_data, x, y, d_out1, n, d_c1, divider);
     cudaDeviceSynchronize();
+
+    auto t2 = high_resolution_clock::now();
+
+    duration<double, std::milli> ms_double = t2 - t1;
+    std:cout << ms_double.count() << "ms\n";
 
     // out1 back to host memory
     cudaError_t errOutMemCpy = cudaMemcpy(out1, d_out1, (sizeof(unsigned char) * y * x * CHANNELS), cudaMemcpyDeviceToHost);
@@ -195,7 +211,7 @@ void process_noise(void) {
     }
 
     // c4 to device memory
-    cudaError_t errC4MemCpy = cudaMemcpy(d_c4, c1, (sizeof(float) * (n + 1) * (n + 1)), cudaMemcpyHostToDevice);
+    cudaError_t errC4MemCpy = cudaMemcpy(d_c4, c4, (sizeof(float) * (n + 1) * (n + 1)), cudaMemcpyHostToDevice);
     if (errC4MemCpy != cudaSuccess) {
         std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
     }
