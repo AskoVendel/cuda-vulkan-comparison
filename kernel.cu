@@ -123,7 +123,7 @@ void process_noise(void) {
 
     unsigned char* data = stbi_load("noise.bmp", &x, &y, &n, CHANNELS);
 
-    unsigned char* out = new unsigned char[x * y * CHANNELS];
+    //unsigned char* out = new unsigned char[x * y * CHANNELS];
     unsigned char* out1 = new unsigned char[x * y * CHANNELS];
     unsigned char* out2 = new unsigned char[x * y * CHANNELS];
     //unsigned char* out3 = new unsigned char[x * y * 3];
@@ -190,7 +190,7 @@ void process_noise(void) {
     auto t2 = high_resolution_clock::now();
 
     duration<double, std::milli> ms_double = t2 - t1;
-    std:cout << ms_double.count() << "ms\n";
+    std::cout << ms_double.count() << "ms\n";
 
     // out1 back to host memory
     cudaError_t errOutMemCpy = cudaMemcpy(out1, d_out1, (sizeof(unsigned char) * y * x * CHANNELS), cudaMemcpyDeviceToHost);
@@ -198,7 +198,7 @@ void process_noise(void) {
         std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
     }
 
-    stbi_write_bmp("noise_blur1.bmp", x, y, CHANNELS, out1);
+    stbi_write_bmp("noise_blur1_cuda.bmp", x, y, CHANNELS, out1);
 
     n = 2;
     float* c4 = new float[(n + 1) * (n + 1)];
@@ -232,7 +232,7 @@ void process_noise(void) {
         std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
     }
 
-    stbi_write_bmp("noise_sharp1.bmp", x, y, CHANNELS, out2);
+    stbi_write_bmp("noise_sharp1_cuda.bmp", x, y, CHANNELS, out2);
 
 }
 
