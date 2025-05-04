@@ -366,3 +366,9 @@ FodyWeavers.xsd
 /noise_blur1.bmp
 /noise_sharp1.bmp
 /vulkan_main.cpp
+/ComputeShader.hlsl
+/noise_blur1_cuda.bmp
+/noise_blur1_vulkan.bmp
+/noise_blur1_vulkan_glsl.bmp
+/noise_blur1_vulkan_hlsl.bmp
+/noise_sharp1_cuda.bmp
