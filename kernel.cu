@@ -113,6 +113,10 @@ void process_noise(void) {
     float* d_c4;
     unsigned char* d_out2;
 
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+
     ok = stbi_info("noise.bmp", &x, &y, &n);
 
     cout << "OK?: " << ok << "\n";
@@ -121,6 +125,7 @@ void process_noise(void) {
     cout << "bytes per pixel: " << n << "\n";
     cout << "-------------------------" << "\n";
 
+
     unsigned char* data = stbi_load("noise.bmp", &x, &y, &n, CHANNELS);
 
     //unsigned char* out = new unsigned char[x * y * CHANNELS];
@@ -128,32 +133,22 @@ void process_noise(void) {
     unsigned char* out2 = new unsigned char[x * y * CHANNELS];
     //unsigned char* out3 = new unsigned char[x * y * 3];
 
+    n = 4;
+    float* c1 = new float[(n + 1) * (n + 1)];
+    average_filter(n, c1);
+
+    auto tMemAllocate1 = high_resolution_clock::now();
+
     // Allocate Data memory on device
     cudaError_t errDataMalloc = cudaMalloc((void**)&d_data, (sizeof(unsigned char) * y * x * CHANNELS));
     if (errDataMalloc != cudaSuccess) {
         std::cerr << "CUDA DataMalloc failed: " << cudaGetErrorString(errDataMalloc) << std::endl;
     }
 
-    // Data to device memory
-    cudaError_t errDataMemCpy = cudaMemcpy(d_data, data, (sizeof(unsigned char) * y * x * CHANNELS), cudaMemcpyHostToDevice);
-    if (errDataMemCpy != cudaSuccess) {
-        std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
-    }
-
-    n = 4;
-    float* c1 = new float[(n + 1) * (n + 1)];
-    average_filter(n, c1);
-
     // Allocate c1 memory on device
     cudaError_t errC1Malloc = cudaMalloc((void**)&d_c1, (sizeof(float) * (n + 1) * (n + 1)));
     if (errC1Malloc != cudaSuccess) {
         std::cerr << "CUDA DataMalloc failed: " << cudaGetErrorString(errDataMalloc) << std::endl;
-    }
-
-    // c1 to device memory
-    cudaError_t errC1MemCpy = cudaMemcpy(d_c1, c1, (sizeof(float) * (n + 1) * (n + 1)), cudaMemcpyHostToDevice);
-    if (errC1MemCpy != cudaSuccess) {
-        std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
     }
 
     // Allocate out1 memory on device
@@ -162,12 +157,36 @@ void process_noise(void) {
         std::cerr << "CUDA DataMalloc failed: " << cudaGetErrorString(errDataMalloc) << std::endl;
     }
 
+    auto tMemAllocate2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memAllocateTime = tMemAllocate2 - tMemAllocate1;
+    std::cout << "All memory allocate time: " << memAllocateTime.count() << " ms\n";
+
+    auto tMemTransfer1 = high_resolution_clock::now();
+
+    // Data to device memory
+    cudaError_t errDataMemCpy = cudaMemcpy(d_data, data, (sizeof(unsigned char) * y * x * CHANNELS), cudaMemcpyHostToDevice);
+
+    if (errDataMemCpy != cudaSuccess) {
+        std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
+    }
+
+    // c1 to device memory
+    cudaError_t errC1MemCpy = cudaMemcpy(d_c1, c1, (sizeof(float) * (n + 1) * (n + 1)), cudaMemcpyHostToDevice);
+    if (errC1MemCpy != cudaSuccess) {
+        std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
+    }
+
     // out1 to device memory
     cudaError_t errOut1MemCpy = cudaMemcpy(d_out1, out1, (sizeof(unsigned char) * y * x * CHANNELS), cudaMemcpyHostToDevice);
     if (errOut1MemCpy != cudaSuccess) {
         std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
     }
 
+    auto tMemTransfer2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memTransferTime = tMemTransfer2 - tMemTransfer1;
+    std::cout << "All memory transfer time: " << memTransferTime.count() << " ms\n";
     
     float divider = 0;
     for (int i = -n; i <= n; i++)
@@ -177,20 +196,28 @@ void process_noise(void) {
     dim3 blockSize(16, 16);
     dim3 gridSize((x + blockSize.x - 1) / blockSize.x, (y + blockSize.y - 1) / blockSize.y);
 
-    using std::chrono::high_resolution_clock;
-    using std::chrono::duration_cast;
-    using std::chrono::duration;
-    using std::chrono::milliseconds;
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
-    auto t1 = high_resolution_clock::now();
+    cudaEventRecord(start);
 
-    lowpass_filter_kernel << <gridSize, blockSize >> > (d_data, x, y, d_out1, n, d_c1, divider);
+    lowpass_filter_kernel<< <gridSize, blockSize >> > (d_data, x, y, d_out1, n, d_c1, divider);
     cudaDeviceSynchronize();
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float ms = 0;
+    cudaEventElapsedTime(&ms, start, stop);
+    printf("Kernel took %f ms\n", ms);
+
+    /*
     auto t2 = high_resolution_clock::now();
 
     duration<double, std::milli> ms_double = t2 - t1;
     std::cout << ms_double.count() << "ms\n";
+    */
 
     // out1 back to host memory
     cudaError_t errOutMemCpy = cudaMemcpy(out1, d_out1, (sizeof(unsigned char) * y * x * CHANNELS), cudaMemcpyDeviceToHost);

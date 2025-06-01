@@ -55,6 +55,11 @@ void sharpening_filter(int N, float* coeff) {
 }
 
 void process_noise(void) {
+
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+
 	int x;
 	int y;
 	int n;
@@ -176,19 +181,33 @@ void process_noise(void) {
         vk::SharingMode::eExclusive
     };
 
+    auto tCreateBuffer1 = high_resolution_clock::now();
+
     //Buffer creation
     vk::Buffer dataBuffer = Device.createBuffer(bufferCreateInfo1);
     vk::Buffer outBuffer = Device.createBuffer(bufferCreateInfo2);
     vk::Buffer CoeffBuffer = Device.createBuffer(bufferCreateInfoCoeff);
-    vk::Buffer C4Buffer = Device.createBuffer(bufferCreateInfoC4);
+    //vk::Buffer C4Buffer = Device.createBuffer(bufferCreateInfoC4);
+
+    auto tCreateBuffer2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memBufferCreateTime = tCreateBuffer2 - tCreateBuffer1;
+    std::cout << "\n" << "Buffer creation time: " << memBufferCreateTime.count() << " ms\n";
+
+    auto tMemReqs1 = high_resolution_clock::now();
 
     //Buffer memory reqs
     vk::MemoryRequirements dataMemReqs = Device.getBufferMemoryRequirements(dataBuffer);
     vk::MemoryRequirements outMemReqs = Device.getBufferMemoryRequirements(outBuffer);
     vk::MemoryRequirements CoeffMemReqs = Device.getBufferMemoryRequirements(CoeffBuffer);
-    vk::MemoryRequirements C4MemReqs = Device.getBufferMemoryRequirements(C4Buffer);
+    //vk::MemoryRequirements C4MemReqs = Device.getBufferMemoryRequirements(C4Buffer);
 
-    if (BufferSize1 > dataMemReqs.size || BufferSize2 > outMemReqs.size || BufferSizeCoeff > CoeffMemReqs.size || BufferSizeC4 > C4MemReqs.size) {
+    auto tMemReqs2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memReqsTime = tMemReqs2 - tMemReqs1;
+    std::cout << "Get Buffer Memory Requirements time: " << memReqsTime.count() << " ms\n";
+
+    if (BufferSize1 > dataMemReqs.size || BufferSize2 > outMemReqs.size || BufferSizeCoeff > CoeffMemReqs.size /*|| BufferSizeC4 > C4MemReqs.size*/) {
         throw std::runtime_error("Buffer size exceeds allocated memory size!");
     }
 
@@ -202,6 +221,8 @@ void process_noise(void) {
         }
         throw std::runtime_error("Failed to find suitable memory type!");
         };
+
+    auto tMemAllocate1 = high_resolution_clock::now();
 
     //Memory allocation to buffers
     vk::MemoryAllocateInfo dataAllocInfo{
@@ -222,48 +243,80 @@ void process_noise(void) {
     };
     vk::DeviceMemory CoeffMemory = Device.allocateMemory(CoeffAllocInfo);
 
+    /* C4 not needed for now
     vk::MemoryAllocateInfo C4AllocInfo{
     C4MemReqs.size,
     findMemoryType(C4MemReqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)
     };
     vk::DeviceMemory C4Memory = Device.allocateMemory(C4AllocInfo);
+    */
+
+    auto tMemAllocate2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memAllocateTime = tMemAllocate2 - tMemAllocate1;
+    std::cout << "Memory allocation to buffers time: " << memAllocateTime.count() << " ms\n";
+
+    auto tMemBinding1 = high_resolution_clock::now();
 
     //Buffer binding to memory
     Device.bindBufferMemory(dataBuffer, dataMemory, 0);
     Device.bindBufferMemory(outBuffer, outMemory, 0);
     Device.bindBufferMemory(CoeffBuffer, CoeffMemory, 0);
-    Device.bindBufferMemory(C4Buffer, C4Memory, 0);
+    //Device.bindBufferMemory(C4Buffer, C4Memory, 0);
+
+    auto tMemBinding2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memBindingTime = tMemBinding2 - tMemBinding1;
+    std::cout << "Buffer binding to memory time: " << memBindingTime.count() << " ms\n";
+
+    auto tMemMapMemory1 = high_resolution_clock::now();
 
     //Mapping and copying data to memory
     void* mappedData = Device.mapMemory(dataMemory, 0, BufferSize1);
     if (!mappedData) {
         throw std::runtime_error("Failed to map data memory!");
     }
-    memcpy(mappedData, data, BufferSize1);
-    Device.unmapMemory(dataMemory);
 
     void* mappedOut = Device.mapMemory(outMemory, 0, BufferSize2);
     if (!mappedOut) {
         throw std::runtime_error("Failed to map zeros memory!");
     }
-    memcpy(mappedOut, out1, BufferSize2);
-    //Device.unmapMemory(outMemory);
 
     void* mappedCoeff = Device.mapMemory(CoeffMemory, 0, BufferSizeCoeff);
     if (!mappedCoeff) {
         throw std::runtime_error("Failed to map Coeff memory!");
     }
+
+    auto tMemMapMemory2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memMapTime = tMemMapMemory2 - tMemMapMemory1;
+    std::cout << "All memory mapping time: " << memMapTime.count() << " ms\n";
+
+    auto tMemTransfer1 = high_resolution_clock::now();
+
+    memcpy(mappedData, data, BufferSize1);
+    memcpy(mappedOut, out1, BufferSize2);
     memcpy(mappedCoeff, c1, BufferSizeCoeff);
+
+    auto tMemTransfer2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memTransferTime = tMemTransfer2 - tMemTransfer1;
+    std::cout << "All memcpy time: " << memTransferTime.count() << " ms\n";
+
+    //Unmapping memory
+    Device.unmapMemory(dataMemory);
     //Device.unmapMemory(outMemory);
 
+    /* for high-pass filter, not needed yet
     void* mappedC4 = Device.mapMemory(C4Memory, 0, BufferSizeC4);
     if (!mappedC4) {
         throw std::runtime_error("Failed to map Coeff memory!");
     }
     memcpy(mappedC4, c4, BufferSizeC4);
+    */
     //Device.unmapMemory(outMemory);
 
-    std::cout << "Data, c1, c4 and out1 copied to device memory successfully." << std::endl;
+    std::cout << "\n" << "Data, c1 and out1 copied to device memory successfully." << std::endl;
 
     //Shadermodule creation
     std::vector<char> ShaderContents;
@@ -324,7 +377,7 @@ void process_noise(void) {
         PipelineLayout);              // Pipeline Layout
     vk::Pipeline ComputePipeline = Device.createComputePipeline(PipelineCache, ComputePipelineCreateInfo).value;
 
-    vk::DescriptorPoolSize DescriptorPoolSize(vk::DescriptorType::eStorageBuffer, 2);
+    vk::DescriptorPoolSize DescriptorPoolSize(vk::DescriptorType::eStorageBuffer, 4);
     vk::DescriptorPoolCreateInfo DescriptorPoolCreateInfo(vk::DescriptorPoolCreateFlags(), 1, DescriptorPoolSize);
     vk::DescriptorPool DescriptorPool = Device.createDescriptorPool(DescriptorPoolCreateInfo);
 
@@ -381,10 +434,6 @@ void process_noise(void) {
         &params                            // Pointer to the push constant data
     );
 
-    using std::chrono::high_resolution_clock;
-    using std::chrono::duration;
-    using std::chrono::milliseconds;
-
     CmdBuffer.dispatch((x + 15) / 16, (y + 15) / 16, 1);
     CmdBuffer.end();
 
@@ -407,7 +456,7 @@ void process_noise(void) {
     auto t2 = high_resolution_clock::now();
 
     duration<double, std::milli> ms_double = t2 - t1;
-    std::cout << ms_double.count() << " ms\n";
+    std::cout << "low-pass filter kernel runtime: " << ms_double.count() << " ms\n";
 
     Device.destroyFence(Fence);
 

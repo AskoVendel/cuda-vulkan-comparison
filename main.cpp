@@ -213,6 +213,7 @@ void process_noise(void) {
 
 	stbi_write_bmp("noise_blur1.bmp", x, y, 3, out);
 
+	
 	/*n = 8;
 	float *c2 = new float[(n+1) * (n+1)];
 	gaussian_filter(n, c2);

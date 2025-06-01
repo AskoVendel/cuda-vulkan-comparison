@@ -140,10 +140,13 @@
     <ClInclude Include="stb_image_write.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="vulkan_main.cpp" />
+    <None Include="ComputeShader.spv" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ComputeShader.spv" />
+    <CudaCompile Include="kernel.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="vulkan_main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
