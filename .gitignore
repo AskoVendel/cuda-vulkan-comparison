@@ -372,3 +372,6 @@ FodyWeavers.xsd
 /noise_blur1_vulkan_glsl.bmp
 /noise_blur1_vulkan_hlsl.bmp
 /noise_sharp1_cuda.bmp
+/GPUPlatformsComp.exe
+/output_sharp_101.bmp
+/output_sharp_11.bmp
