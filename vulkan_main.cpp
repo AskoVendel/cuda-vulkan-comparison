@@ -461,7 +461,16 @@ void process_noise(void) {
     Device.destroyFence(Fence);
 
     unsigned char* out = new unsigned char[x * y * CHANNELS];
+
+    auto tMemBack1 = high_resolution_clock::now();
+
     memcpy(out, mappedOut, BufferSize2);
+
+    auto tMemBack2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memTransferBack = tMemBack2 - tMemBack1;
+    std::cout << "All memcpy back to RAM time: " << memTransferBack.count() << " ms\n";
+
     Device.unmapMemory(outMemory);
 
     stbi_write_bmp("noise_blur1_vulkan.bmp", x, y, CHANNELS, out);

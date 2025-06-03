@@ -375,3 +375,8 @@ FodyWeavers.xsd
 /GPUPlatformsComp.exe
 /output_sharp_101.bmp
 /output_sharp_11.bmp
+/a.exe
+/a.exp
+/a.lib
+/GPUPlatformsComp.vcxproj
+/GPUPlatformsComp.vcxproj.filters

@@ -17,6 +17,7 @@ using namespace std;
 
 #define CHANNELS 4
 
+
 void average_filter(int N, float* coeff) {
     for (int i = 0; i <= N; i++)
         for (int j = 0; j <= N; j++)
@@ -125,6 +126,8 @@ void process_noise(void) {
     cout << "bytes per pixel: " << n << "\n";
     cout << "-------------------------" << "\n";
 
+    
+    
 
     unsigned char* data = stbi_load("noise.bmp", &x, &y, &n, CHANNELS);
 
@@ -132,6 +135,11 @@ void process_noise(void) {
     unsigned char* out1 = new unsigned char[x * y * CHANNELS];
     unsigned char* out2 = new unsigned char[x * y * CHANNELS];
     //unsigned char* out3 = new unsigned char[x * y * 3];
+
+    //unsigned char* out1 = new unsigned char[x * y * CHANNELS];
+    //unsigned char* out2 = new unsigned char[x * y * CHANNELS];
+    memcpy(out1, data, x * y * CHANNELS); // koopia sisendist
+    memcpy(out2, data, x * y * CHANNELS);
 
     n = 4;
     float* c1 = new float[(n + 1) * (n + 1)];
@@ -220,10 +228,18 @@ void process_noise(void) {
     */
 
     // out1 back to host memory
+
+    auto tMemBack1 = high_resolution_clock::now();
+
     cudaError_t errOutMemCpy = cudaMemcpy(out1, d_out1, (sizeof(unsigned char) * y * x * CHANNELS), cudaMemcpyDeviceToHost);
     if (errOutMemCpy != cudaSuccess) {
         std::cerr << "CUDA DataMemCpy failed: " << cudaGetErrorString(errDataMemCpy) << std::endl;
     }
+
+    auto tMemBack2 = high_resolution_clock::now();
+
+    duration<double, std::milli> memBackTime = tMemBack2 - tMemBack1;
+    std::cout << "All memory transfer Back time: " << memBackTime.count() << " ms\n";
 
     stbi_write_bmp("noise_blur1_cuda.bmp", x, y, CHANNELS, out1);
 
