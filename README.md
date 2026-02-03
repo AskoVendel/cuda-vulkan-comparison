@@ -11,5 +11,5 @@ This project implements image processing FIR filters (high-pass and low-pass) an
 
 * Data visualization of filter results and performance metrics
 
-Theses document(including performance metrics) is available [HERE]([URL](https://digikogu.taltech.ee/et/Download/d4f2879b-4da0-4b90-b29e-be158d28747e)).
+Theses document(including performance metrics) is available [HERE](https://digikogu.taltech.ee/et/Download/d4f2879b-4da0-4b90-b29e-be158d28747e).
 Note that the document is in Estonian.
