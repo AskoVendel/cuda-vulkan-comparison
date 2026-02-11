@@ -78,7 +78,7 @@ void process_noise(void) {
 	unsigned char* out1 = new unsigned char[x * y * CHANNELS];
 	unsigned char* out2 = new unsigned char[x * y * CHANNELS];
 
-    //Misc
+    // Misc
 
     n = 4;
     float* c1 = new float[(n + 1) * (n + 1)];
@@ -93,7 +93,7 @@ void process_noise(void) {
     float* c4 = new float[(nSharp + 1) * (nSharp + 1)];
     sharpening_filter(nSharp, c4);
 
-    //App creation
+    // App creation
     vk::ApplicationInfo AppInfo{
     "VulkanCompute",      
     1,                    
@@ -111,7 +111,7 @@ void process_noise(void) {
     auto availableLayers = vk::enumerateInstanceLayerProperties();
 
 
-    //Enumerate phsyical devices
+    // Enumerate phsyical devices
     vk::PhysicalDevice PhysicalDevice = Instance.enumeratePhysicalDevices().front();
     vk::PhysicalDeviceProperties DeviceProps = PhysicalDevice.getProperties();
     std::cout << "Device Name    : " << DeviceProps.deviceName << std::endl;
@@ -120,7 +120,7 @@ void process_noise(void) {
     vk::PhysicalDeviceLimits DeviceLimits = DeviceProps.limits;
     std::cout << "Max Compute Shared Memory Size: " << DeviceLimits.maxComputeSharedMemorySize / 1024 << " KB" << std::endl;
 
-    //Queue creation
+    // Queue creation
     std::vector<vk::QueueFamilyProperties> QueueFamilyProps = PhysicalDevice.getQueueFamilyProperties();
     auto PropIt = std::find_if(QueueFamilyProps.begin(), QueueFamilyProps.end(), [](const vk::QueueFamilyProperties& Prop)
         {
@@ -132,7 +132,7 @@ void process_noise(void) {
         throw std::runtime_error("No compute-capable queue family found!");
     }
 
-    //Device creation
+    // Device creation
     const float QueuePriority = 1.0f;
     vk::DeviceQueueCreateInfo DeviceQueueCreateInfo(vk::DeviceQueueCreateFlags(),  
         ComputeQueueFamilyIndex,        
@@ -146,9 +146,9 @@ void process_noise(void) {
     vk::DeviceSize BufferSizeCoeff = sizeof(float) * (n + 1) * (n + 1);
     vk::DeviceSize BufferSizeC4 = sizeof(float) * (nSharp + 1) * (nSharp + 1);
 
-    //Buffers
+    // Buffers
 
-    //Buffer creation info-s
+    // Buffer creation info-s
     vk::BufferCreateInfo bufferCreateInfo1{
         vk::BufferCreateFlags(),                   
         BufferSize1,                                
@@ -183,7 +183,7 @@ void process_noise(void) {
 
     auto tCreateBuffer1 = high_resolution_clock::now();
 
-    //Buffer creation
+    // Buffer creation
     vk::Buffer dataBuffer = Device.createBuffer(bufferCreateInfo1);
     vk::Buffer outBuffer = Device.createBuffer(bufferCreateInfo2);
     vk::Buffer CoeffBuffer = Device.createBuffer(bufferCreateInfoCoeff);
@@ -196,7 +196,7 @@ void process_noise(void) {
 
     auto tMemReqs1 = high_resolution_clock::now();
 
-    //Buffer memory reqs
+    // Buffer memory reqs
     vk::MemoryRequirements dataMemReqs = Device.getBufferMemoryRequirements(dataBuffer);
     vk::MemoryRequirements outMemReqs = Device.getBufferMemoryRequirements(outBuffer);
     vk::MemoryRequirements CoeffMemReqs = Device.getBufferMemoryRequirements(CoeffBuffer);
@@ -258,7 +258,7 @@ void process_noise(void) {
 
     auto tMemBinding1 = high_resolution_clock::now();
 
-    //Buffer binding to memory
+    // Buffer binding to memory
     Device.bindBufferMemory(dataBuffer, dataMemory, 0);
     Device.bindBufferMemory(outBuffer, outMemory, 0);
     Device.bindBufferMemory(CoeffBuffer, CoeffMemory, 0);
@@ -271,7 +271,7 @@ void process_noise(void) {
 
     auto tMemMapMemory1 = high_resolution_clock::now();
 
-    //Mapping and copying data to memory
+    // Mapping and copying data to memory
     void* mappedData = Device.mapMemory(dataMemory, 0, BufferSize1);
     if (!mappedData) {
         throw std::runtime_error("Failed to map data memory!");
@@ -303,7 +303,7 @@ void process_noise(void) {
     duration<double, std::milli> memTransferTime = tMemTransfer2 - tMemTransfer1;
     std::cout << "All memcpy time: " << memTransferTime.count() << " ms\n";
 
-    //Unmapping memory
+    // Unmapping memory
     Device.unmapMemory(dataMemory);
     //Device.unmapMemory(outMemory);
 
@@ -318,7 +318,7 @@ void process_noise(void) {
 
     std::cout << "\n" << "Data, c1 and out1 copied to device memory successfully." << std::endl;
 
-    //Shadermodule creation
+    // Shadermodule creation
     std::vector<char> ShaderContents;
     if (std::ifstream ShaderFile{ "ComputeShader.spv", std::ios::binary | std::ios::ate })
     {
@@ -334,9 +334,9 @@ void process_noise(void) {
         reinterpret_cast<const uint32_t*>(ShaderContents.data()));    
     vk::ShaderModule ShaderModule = Device.createShaderModule(ShaderModuleCreateInfo);
 
-    //Descriptor sets
+    // Descriptor sets
 
-    //Layout
+    // Layout
     const std::vector<vk::DescriptorSetLayoutBinding> DescriptorSetLayoutBinding = {
     {0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},
     {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},
@@ -348,33 +348,33 @@ void process_noise(void) {
         DescriptorSetLayoutBinding);
     vk::DescriptorSetLayout DescriptorSetLayout = Device.createDescriptorSetLayout(DescriptorSetLayoutCreateInfo);
 
-    // Define the push constant range
+    
     vk::PushConstantRange pushConstantRange{
-        vk::ShaderStageFlagBits::eCompute, // Shader stage using the push constant
-        0,                                 // Offset in bytes
-        sizeof(Constants)                  // Size of the push constant block
+        vk::ShaderStageFlagBits::eCompute, 
+        0,                                 
+        sizeof(Constants)                  
     };
 
-    // Pipeline layout with push constant range
+    // Pipeline
     vk::PipelineLayoutCreateInfo PipelineLayoutCreateInfo(
-        vk::PipelineLayoutCreateFlags(),  // Flags
-        1,                                // Set Layout Count (assuming 1 descriptor set layout)
-        &DescriptorSetLayout,             // Pointer to descriptor set layout(s)
-        1,                                // Push Constant Range Count
-        &pushConstantRange                // Pointer to push constant ranges
+        vk::PipelineLayoutCreateFlags(),  
+        1,                                
+        &DescriptorSetLayout,             
+        1,                                
+        &pushConstantRange                
     );
     vk::PipelineLayout PipelineLayout = Device.createPipelineLayout(PipelineLayoutCreateInfo);
     vk::PipelineCache PipelineCache = Device.createPipelineCache(vk::PipelineCacheCreateInfo());
 
     vk::PipelineShaderStageCreateInfo PipelineShaderCreateInfo(
-        vk::PipelineShaderStageCreateFlags(),  // Flags
-        vk::ShaderStageFlagBits::eCompute,     // Stage
-        ShaderModule,                          // Shader Module
-        "main");                               // Shader Entry Point
+        vk::PipelineShaderStageCreateFlags(),  
+        vk::ShaderStageFlagBits::eCompute,     
+        ShaderModule,                          
+        "main");                               
     vk::ComputePipelineCreateInfo ComputePipelineCreateInfo(
-        vk::PipelineCreateFlags(),    // Flags
-        PipelineShaderCreateInfo,     // Shader Create Info struct
-        PipelineLayout);              // Pipeline Layout
+        vk::PipelineCreateFlags(),    
+        PipelineShaderCreateInfo,     
+        PipelineLayout);              
     vk::Pipeline ComputePipeline = Device.createComputePipeline(PipelineCache, ComputePipelineCreateInfo).value;
 
     vk::DescriptorPoolSize DescriptorPoolSize(vk::DescriptorType::eStorageBuffer, 4);
@@ -399,20 +399,20 @@ void process_noise(void) {
     vk::CommandPool CommandPool = Device.createCommandPool(CommandPoolCreateInfo);
 
     vk::CommandBufferAllocateInfo CommandBufferAllocInfo(
-        CommandPool,                         // Command Pool
-        vk::CommandBufferLevel::ePrimary,    // Level
-        1);                                  // Num Command Buffers
+        CommandPool,                         
+        vk::CommandBufferLevel::ePrimary,    
+        1);                                  
     const std::vector<vk::CommandBuffer> CmdBuffers = Device.allocateCommandBuffers(CommandBufferAllocInfo);
     vk::CommandBuffer CmdBuffer = CmdBuffers.front();
 
     vk::CommandBufferBeginInfo CmdBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     CmdBuffer.begin(CmdBufferBeginInfo);
     CmdBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, ComputePipeline);
-    CmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,    // Bind point
-        PipelineLayout,                  // Pipeline Layout
-        0,                               // First descriptor set
-        { DescriptorSet },               // List of descriptor sets
-        {});                             // Dynamic offsets
+    CmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,    
+        PipelineLayout,                  
+        0,                               
+        { DescriptorSet },               
+        {});                             
 
     struct PushConstantsLow {
         int width;
@@ -427,11 +427,11 @@ void process_noise(void) {
     params.divider = divider;
 
     CmdBuffer.pushConstants(
-        PipelineLayout,                           // Pipeline layout used by the pipeline
-        vk::ShaderStageFlagBits::eCompute,        // Shader stage
-        0,                                        // Offset
-        sizeof(Constants),                        // Size of the push constant data
-        &params                            // Pointer to the push constant data
+        PipelineLayout,                           
+        vk::ShaderStageFlagBits::eCompute,        
+        0,                                        
+        sizeof(Constants),                        
+        &params                            
     );
 
     CmdBuffer.dispatch((x + 15) / 16, (y + 15) / 16, 1);
@@ -440,18 +440,18 @@ void process_noise(void) {
     vk::Queue Queue = Device.getQueue(ComputeQueueFamilyIndex, 0);
     vk::Fence Fence = Device.createFence(vk::FenceCreateInfo());
 
-    vk::SubmitInfo SubmitInfo(0,                // Num Wait Semaphores
-        nullptr,        // Wait Semaphores
-        nullptr,        // Pipeline Stage Flags
-        1,              // Num Command Buffers
-        &CmdBuffer);    // List of command buffers
+    vk::SubmitInfo SubmitInfo(0,                
+        nullptr,        
+        nullptr,        
+        1,              
+        &CmdBuffer);    
 
     auto t1 = high_resolution_clock::now();
 
     Queue.submit({ SubmitInfo }, Fence);
-    Device.waitForFences({ Fence },             // List of fences
-        true,               // Wait All
-        uint64_t(-1));      // Timeout
+    Device.waitForFences({ Fence },             
+        true,               
+        uint64_t(-1));      
 
     auto t2 = high_resolution_clock::now();
 

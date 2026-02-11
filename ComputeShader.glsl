@@ -4,13 +4,13 @@
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-// Byte-addressable buffers (as uints for 8-bit logic)
+// Byte-addressable buffers (as uints)
 layout(set = 0, binding = 0) buffer InputBuffer {
-    uint d_data[]; // holds bytes
+    uint d_data[]; 
 };
 
 layout(set = 0, binding = 1) buffer OutputBuffer {
-    uint d_out[]; // holds bytes
+    uint d_out[]; 
 };
 
 layout(set = 0, binding = 2) buffer CoeffBuffer {
@@ -25,9 +25,9 @@ layout(push_constant) uniform Params {
 } constants;
 
 uint read_byte(uint index) {
-    uint word = d_data[index >> 2];               // 4 bytes per word
-    uint byte_shift = (index & 3u) * 8u;           // get byte offset
-    return (word >> byte_shift) & 0xFFu;           // extract byte
+    uint word = d_data[index >> 2];               
+    uint byte_shift = (index & 3u) * 8u;           
+    return (word >> byte_shift) & 0xFFu;           
 }
 
 void write_byte(uint index, uint value) {
