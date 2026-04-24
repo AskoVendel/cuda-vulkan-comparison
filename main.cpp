@@ -3,6 +3,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define _CRT_SECURE_NO_WARNINGS
 #include <cmath>
+#include <vector>
 #include <iostream>
 #include "stb_image.h"
 #include "stb_image_write.h"
@@ -188,14 +189,13 @@ void process_noise(void) {
 
 	unsigned char* data = stbi_load("noise.bmp", &x, &y, &n, 3);
 
-	unsigned char* out  = new unsigned char[x * y * 3];
-	unsigned char* out1 = new unsigned char[x * y * 3];
-	unsigned char* out2 = new unsigned char[x * y * 3];
-	unsigned char* out3 = new unsigned char[x * y * 3];
+	std::vector<unsigned char> outputImageBlur(x * y * 3);
+	std::vector<unsigned char> outputImageSharpen(x * y * 3);
 
 	n = 4;
-	float *c1 = new float[(n+1) * (n+1)];
-	average_filter(n, c1);
+	//float *c1 = new float[(n+1) * (n+1)];
+	std::vector<float> c1((n + 1) * (n + 1));
+	average_filter(n, c1.data());
 
 	using std::chrono::high_resolution_clock;
 	using std::chrono::duration_cast;
@@ -204,14 +204,14 @@ void process_noise(void) {
 
 	auto t1 = high_resolution_clock::now();
 
-	lowpass_filter(data, x, y, out, n, c1);
+	lowpass_filter(data, x, y, outputImageBlur.data(), n, c1.data());
 
 	auto t2 = high_resolution_clock::now();
 
 	duration<double, std::milli> ms_double = t2 - t1;
     std:cout << ms_double.count() << "ms\n";
 
-	stbi_write_bmp("noise_blur1.bmp", x, y, 3, out);
+	stbi_write_bmp("noise_blur1.bmp", x, y, 3, outputImageBlur.data());
 
 	
 	/*n = 8;
@@ -221,7 +221,8 @@ void process_noise(void) {
 	stbi_write_bmp("noise_blur2.bmp", x, y, 3, out1);//*/
 
 	n = 1;
-	float c3[4] = {3, -1, -1, 0.25}; // need artikli koefitsiendid, selle pildi jaoks lahja
+	//float c3[4] = {3, -1, -1, 0.25}; // need artikli koefitsiendid, selle pildi jaoks lahja
+	std::vector<float> c3{ 3, -1, -1, 0.25 };
 
 	//avg blur
 	/*highpass_filter(out, x, y, out2, n, c3, 1); // rakendame hägustatud pildile
@@ -237,12 +238,13 @@ void process_noise(void) {
 
 
 	n = 2;
-	float *c4 = new float[(n+1) * (n+1)];
-	sharpening_filter(n, c4);
+	//float *c4 = new float[(n+1) * (n+1)];
+	std::vector<float> c4((n + 1) * (n + 1));
+	sharpening_filter(n, c4.data());
 
 	//avg blur
-	highpass_filter(out, x, y, out2, n, c4, 1.2); // rakendame hägustatud pildile
-	stbi_write_bmp("output_sharp_11.bmp", x, y, 3, out2);
+	highpass_filter(outputImageBlur.data(), x, y, outputImageSharpen.data(), n, c4.data(), 1.2); // rakendame hägustatud pildile
+	stbi_write_bmp("output_sharp_11.bmp", x, y, 3, outputImageSharpen.data());
 	/*highpass_filter(out2, x, y, out3, n, c4, 1); // rakendame veel kord
 	stbi_write_bmp("output_sharp_12.bmp", x, y, 3, out3);//*/
 
@@ -253,19 +255,17 @@ void process_noise(void) {
 	stbi_write_bmp("output_sharp_22.bmp", x, y, 3, out3);//*/
 
 	n = 3;
-	float *c5 = new float[(n+1) * (n+1)];
-	sharpening_filter(n, c5);
+	//float *c5 = new float[(n+1) * (n+1)];
+	std::vector<float> c5((n + 1) * (n + 1));
+	sharpening_filter(n, c5.data());
 
 	//avg blur
-	highpass_filter(out, x, y, out2, n, c5, 0.4); // rakendame hägustatud pildile
-	stbi_write_bmp("output_sharp_101.bmp", x, y, 3, out2);
+	highpass_filter(outputImageBlur.data(), x, y, outputImageSharpen.data(), n, c5.data(), 0.4); // rakendame hägustatud pildile
+	stbi_write_bmp("output_sharp_101.bmp", x, y, 3, outputImageSharpen.data());
 	/*highpass_filter(out2, x, y, out3, n, c4, 1); // rakendame veel kord
 	stbi_write_bmp("output_sharp_102.bmp", x, y, 3, out3);//*/
 
-	delete[] data;
-	delete[] out;
-	delete[] out2;
-	delete[] out3;
+	stbi_image_free(data);
 }
 
 void process_rotate(void) {
